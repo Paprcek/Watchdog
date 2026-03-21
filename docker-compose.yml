@@ -9,7 +9,8 @@ services:
     env_file: ./nautical-b2b-monitor/.env
     restart: always
 
-  # Telecom Equipment Tracker 
+  # Telecom Equipment Tracker
+  telecom-tracker:
     build: ./telecom-equipment-tracker
     volumes:
       - ./telecom-equipment-tracker/data:/app/data

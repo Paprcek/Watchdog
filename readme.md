@@ -23,6 +23,17 @@ A professional-grade monitoring suite designed to track price fluctuations, inve
 * **Environment Management:** Python-Dotenv
 * **Communication:** SMTP (MIME Multi-part HTML emails)
 
+## ⏰ Automation (Scheduling)
+
+To ensure continuous monitoring, you can schedule the execution using **Cron** on the host machine. 
+
+### Example Crontab Configuration
+To run the monitoring suite every day at 8:00 AM:
+
+```bash
+0 8 * * * cd /path/to/watchdog_portfolio_public && /usr/local/bin/docker-compose up --build
+```
+
 ## 📂 Project Structure
 
 ```text
