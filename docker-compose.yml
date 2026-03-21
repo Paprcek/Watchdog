@@ -1,0 +1,17 @@
+version: '3.8'
+
+services:
+  # Nautical B2B Monitor
+  nautical-monitor:
+    build: ./nautical-b2b-monitor
+    volumes:
+      - ./nautical-b2b-monitor/data:/app/data
+    env_file: ./nautical-b2b-monitor/.env
+    restart: always
+
+  # Telecom Equipment Tracker 
+    build: ./telecom-equipment-tracker
+    volumes:
+      - ./telecom-equipment-tracker/data:/app/data
+    env_file: ./telecom-equipment-tracker/.env
+    restart: always
