@@ -229,12 +229,12 @@ def scrape_and_process(session, url, conn, visited_urls, changes):
         print(f"Error processing {url}: {e}")
 
 def run_monitor():
-    """Main monitoring function."""
     conn = initialize_database()
     
-    user = os.getenv("SCRAPE_USERNAME")
-    password = os.getenv("SCRAPE_PASSWORD")
-    payload = {'username': user, 'password': password}
+    user = os.getenv("SCRAPE_USER")
+    pw = os.getenv("SCRAPE_PASS")
+    
+    payload = {'username': user, 'password': pw}
 
     visited_urls = set()
     changes = []
@@ -242,12 +242,32 @@ def run_monitor():
     with requests.Session() as session:
         session.headers.update({'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'})
         
-        print("Authenticating...")
-        session.post(LOGIN_URL, data=payload)
+        print("Logging in...")
+        max_attempts = 3
+        logged_in = False
 
-        print("Starting category scan...")
-        for category_url in TARGET_CATEGORIES:
-            scrape_and_process(session, category_url, conn, visited_urls, changes)
+        for attempt in range(max_attempts):
+            try:
+                response = session.post(LOGIN_URL, data=payload, timeout=30)
+                response.raise_for_status()
+                logged_in = True
+                break
+                
+            except requests.exceptions.RequestException as e:
+                print(f"Login attempt {attempt + 1} failed: {e}")
+                if attempt < max_attempts - 1:
+                    print("Retrying in 15 seconds...")
+                    time.sleep(15)
+                else:
+                    print("Network unavailable, monitor terminating.")
+                    return
+
+        if not logged_in:
+            return
+            
+        print("Starting targeted category monitoring...")
+        for cat_url in TARGET_CATEGORIES:
+            scrape_and_process(session, cat_url, conn, visited_urls, changes)
 
     print(f"Completed. Found {len(changes)} changes.")
     

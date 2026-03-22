@@ -32,9 +32,9 @@ def send_email(subject, body_html):
             server.starttls()
             server.login(sender, password)
             server.send_message(msg)
-        print("📧 Email sent successfully.")
+        print("Email sent successfully.")
     except Exception as e:
-        print(f"❌ Email error: {e}")
+        print(f"Email error: {e}")
 
 def generate_report(changes):
     if not changes:
@@ -121,14 +121,14 @@ def fetch_product_data(session, url):
                 'in_stock': in_stock
             }
     except Exception as e:
-        print(f"⚠️ Error fetching {url}: {e}")
+        print(f"Error fetching {url}: {e}")
     return None
 
 def crawl_and_process(session, url, conn, visited, changes):
     if url in visited:
         return
     visited.add(url)
-    print(f"🔍 Processing: {url}")
+    print(f"Processing: {url}")
     cursor = conn.cursor()
     
     try:
@@ -139,7 +139,7 @@ def crawl_and_process(session, url, conn, visited, changes):
             href = link['href']
             if "action=" in href:
                 continue
-            if ("/Produkte/" in href or "/Products/" in href) and ":::" in href:
+            if "/products/" in href and ":::" in href:
                 clean_path = href.replace(DOMAIN, "").lstrip('/')
                 crawl_and_process(session, DOMAIN + clean_path, conn, visited, changes)
 
@@ -148,7 +148,7 @@ def crawl_and_process(session, url, conn, visited, changes):
             href = link['href']
             if "action=" in href:
                 continue
-            if ("/Produkte/" in href or "/Products/" in href) and ":::" not in href.split("/")[-1]:
+            if "/products/" in href and ":::" not in href.split("/")[-1]:
                 clean_path = href.replace(DOMAIN, "").lstrip('/')
                 product_links.add(DOMAIN + clean_path)
 
@@ -195,22 +195,47 @@ def crawl_and_process(session, url, conn, visited, changes):
             time.sleep(0.2)
 
     except Exception as e:
-        print(f"❌ Crawl error: {e}")
+        print(f"Crawl error: {e}")
 
 def run_monitor():
     conn = initialize_database()
-    username = os.getenv("TARGET_USERNAME")
-    password = os.getenv("TARGET_PASSWORD")
-    visited, changes = set(), []
+    user = os.getenv("SCRAPE_USER")
+    pw = os.getenv("SCRAPE_PASS")
+    visited = set()
+    changes = []
 
     with requests.Session() as session:
         session.headers.update({'User-Agent': 'Mozilla/5.0'})
-        print("🔑 Authenticating...")
-        session.post(LOGIN_URL, data={'email_address': username, 'password': password})
+        print("Logging in...")
+        
+        max_attempts = 3
+        logged_in = False
+        payload = {'email_address': user, 'password': pw}
+
+        for attempt in range(max_attempts):
+            try:
+                response = session.post(LOGIN_URL, data=payload, timeout=30)
+                response.raise_for_status()
+                logged_in = True
+                break
+                
+            except requests.exceptions.RequestException as e:
+                print(f"Login attempt {attempt + 1} failed: {e}")
+                if attempt < max_attempts - 1:
+                    print("Retrying in 15 seconds...")
+                    time.sleep(15)
+                else:
+                    print("Network unavailable, monitor terminating.")
+                    return
+
+        if not logged_in:
+            return
+            
+        print("Starting MaritimeDealer monitoring...")
         crawl_and_process(session, BASE_URL, conn, visited, changes)
 
     report_html = generate_report(changes)
-    send_email(f"Monitor Report: {len(changes)} changes detected", report_html)
+    send_email(f"Maritime Dealer Report: {len(changes)} changes", report_html)
     conn.close()
 
 if __name__ == "__main__":
